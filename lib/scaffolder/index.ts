@@ -195,6 +195,7 @@ export function generateDefinitions(abi: SolidityABI): string {
     for (const functionDescription of definitions.functions) {
         if (!functionDescription.name) {
             // TODO: handle nameless functions if necessary
+            // skipping for now because I can't think of a use-case
             continue
         }
 
