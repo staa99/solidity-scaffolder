@@ -1,15 +1,15 @@
 export type SolidityABI = SolidityDefinition[]
 type SolidityStateMutability = 'pure' | 'view' | 'payable' | 'nonpayable'
-type SolidityDefinition = FunctionDescription | EventDescription | ErrorDescription
+export type SolidityDefinition = FunctionDescription | EventDescription | ErrorDescription
 
 export interface CompilationOutput {
-    _format: string,
-    contractName: string,
-    sourceName: string,
-    abi: SolidityABI,
-    bytecode: string,
-    deployedBytecode: string,
-    linkReferences: any,
+    _format: string
+    contractName: string
+    sourceName: string
+    abi: SolidityABI
+    bytecode: string
+    deployedBytecode: string
+    linkReferences: any
     deployedLinkReferences: any
 }
 
@@ -25,20 +25,20 @@ export interface EventDescription {
     name: string
     type: 'event'
     inputs?: SolidityType[]
-    anonymous?: boolean,
+    anonymous?: boolean
 }
 
 export interface ErrorDescription {
     name: string
     type: 'error'
     inputs?: SolidityType[]
-    anonymous?: boolean,
+    anonymous?: boolean
 }
 
 export interface SolidityType {
-    components?: SolidityType[],
-    indexed?: boolean,
-    internalType?: string,
-    name: string,
+    name: string
     type: string
+    components?: SolidityType[]
+    indexed?: boolean
+    internalType?: string
 }

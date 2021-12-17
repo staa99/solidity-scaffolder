@@ -4,7 +4,6 @@
   "description": "Scaffold smart contract types for use with TypeScript and Ethers.js",
   "main": "dist/index.js",
   "dependencies": {
-    "@types/node": "^17.0.0",
     "ansi-styles": "^3.2.1",
     "argparse": "^1.0.10",
     "balanced-match": "^1.0.2",
@@ -13,7 +12,7 @@
     "chalk": "^2.4.2",
     "color-convert": "^1.9.3",
     "color-name": "^1.1.3",
-    "commander": "^2.20.3",
+    "commander": "^8.3.0",
     "concat-map": "^0.0.1",
     "diff": "^4.0.2",
     "escape-string-regexp": "^1.0.5",
@@ -38,16 +37,19 @@
     "semver": "^5.7.1",
     "sprintf-js": "^1.0.3",
     "supports-color": "^5.5.0",
+    "ts-node": "^10.4.0",
     "tslib": "^1.14.1",
     "wrappy": "^1.0.2"
   },
   "devDependencies": {
+    "@types/node": "^17.0.0",
     "tslint": "^6.1.3",
     "typescript": "^4.5.4"
   },
   "scripts": {
-    "start": "tsc && node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run-sample": "npm run start -- -f samples/ethers-docs-sample.json"
   },
   "repository": {
     "type": "git",
