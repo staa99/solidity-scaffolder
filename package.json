@@ -49,7 +49,8 @@
   "scripts": {
     "start": "ts-node index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "run-sample": "npm run start -- -f samples/ethers-docs-sample.json"
+    "run-basic-sample": "npm run start -- -f samples/ethers-docs-sample.json",
+    "run-hh-sample": "npm run start -- -f samples/sample-hardhat-compilation-output.json"
   },
   "repository": {
     "type": "git",

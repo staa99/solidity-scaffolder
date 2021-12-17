@@ -165,7 +165,9 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
             throw new Error(`Tuple definitition ${solidityType.internalType} is unsupported`)
         }
 
-        const typeName = solidityType.internalType.substring(indexOfDot + 1).trim()
+        let typeName = solidityType.internalType.substring(indexOfDot + 1).trim()
+        const indexOfBracket = typeName.indexOf('[')
+        typeName = typeName.substring(0, indexOfBracket === -1 ? undefined : indexOfBracket)
         let structDefinition = interfaces.has(typeName) ? interfaces.get(typeName) : null
         if (!structDefinition) {
             structDefinition = generateStructDefinitionFromType(typeName, solidityType, interfaces)
