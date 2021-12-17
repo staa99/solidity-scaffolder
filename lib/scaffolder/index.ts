@@ -21,6 +21,33 @@ export async function parseABIFile(path: string): Promise<SolidityABI> {
     return JSON.parse(rawAbi) as SolidityABI
 }
 
+export function generateDefinitions(abi: SolidityABI): string {
+    let contractDefinition = 'interface SolidityContract {'
+
+    const definitions = extractDefinitions(abi)
+
+    // store interfaces created as part of definition
+    // discovery in map by name for side-by-side definition
+    const interfaces = new Map<string, string>()
+
+    for (const functionDescription of definitions.functions) {
+        if (!functionDescription.name) {
+            // TODO: handle nameless functions if necessary
+            // skipping for now because I can't think of a use-case
+            continue
+        }
+
+        const inputObjects = functionDescription.inputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, interfaces)) ?? []
+        const parameterList = inputObjects.map((parameter) => `${parameter.identifier}: ${parameter.tsType.typeName}`).join(', ')
+        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, interfaces);
+        let functionDefinition = `${functionDescription.name}(${parameterList}): ${returnTypeDefinition}`
+        contractDefinition += `\n  ${functionDefinition}`
+    }
+
+    contractDefinition += '\n}'
+    return contractDefinition
+}
+
 function extractDefinitions(abi: SolidityDefinition[]) {
     const definitions: Definitions = {
         functions: [],
@@ -181,31 +208,4 @@ function buildReturnTypeDefinition(functionDescription: FunctionDescription, int
 
     returnTypeDefinition += '>'
     return returnTypeDefinition;
-}
-
-export function generateDefinitions(abi: SolidityABI): string {
-    let contractDefinition = 'interface SolidityContract {'
-
-    const definitions = extractDefinitions(abi)
-
-    // store interfaces created as part of definition
-    // discovery in map by name for side-by-side definition
-    const interfaces = new Map<string, string>()
-
-    for (const functionDescription of definitions.functions) {
-        if (!functionDescription.name) {
-            // TODO: handle nameless functions if necessary
-            // skipping for now because I can't think of a use-case
-            continue
-        }
-
-        const inputObjects = functionDescription.inputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, interfaces)) ?? []
-        const parameterList = inputObjects.map((parameter) => `${parameter.identifier}: ${parameter.tsType.typeName}`).join(', ')
-        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, interfaces);
-        let functionDefinition = `${functionDescription.name}(${parameterList}): ${returnTypeDefinition}`
-        contractDefinition += `\n  ${functionDefinition}`
-    }
-
-    contractDefinition += '\n}'
-    return contractDefinition
 }
