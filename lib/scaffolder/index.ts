@@ -22,14 +22,12 @@ export async function parseABIFile(path: string): Promise<SolidityABI> {
 }
 
 export function generateDefinitions(abi: SolidityABI): string {
-    let contractDefinition = 'interface SolidityContract {'
-
     const definitions = extractDefinitions(abi)
-
     // store interfaces created as part of definition
     // discovery in map by name for side-by-side definition
     const interfaces = new Map<string, string>()
 
+    let contractDefinition = 'interface SolidityContract {'
     for (const functionDescription of definitions.functions) {
         if (!functionDescription.name) {
             // TODO: handle nameless functions if necessary
@@ -43,9 +41,15 @@ export function generateDefinitions(abi: SolidityABI): string {
         let functionDefinition = `${functionDescription.name}(${parameterList}): ${returnTypeDefinition}`
         contractDefinition += `\n  ${functionDefinition}`
     }
-
     contractDefinition += '\n}'
-    return contractDefinition
+
+    let definitionResult = `${contractDefinition}\n`
+    if (interfaces.size > 0) {
+        for(const [, definition] of interfaces.entries()) {
+            definitionResult += `\n${definition}\n`
+        }
+    }
+    return definitionResult
 }
 
 function extractDefinitions(abi: SolidityDefinition[]) {
