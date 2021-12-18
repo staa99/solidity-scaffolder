@@ -15,6 +15,19 @@ interface Definitions {
     errors: ErrorDescription[]
 }
 
+interface StateData {
+    /**
+     * Interface definitions created as part of the discovery process.
+     * Maps type names to full interface definitions (with body)
+     */
+    interfaces: Map<string, string>
+
+    /**
+     * Tracks the number of generated variable names
+     */
+    generatedNameCount: number
+}
+
 export async function parseABIFile(path: string): Promise<SolidityABI> {
     const abiFile = await open(path, 'r')
     const rawAbi = await abiFile.readFile('utf-8')
@@ -23,11 +36,15 @@ export async function parseABIFile(path: string): Promise<SolidityABI> {
 
 export function generateDefinitions(abi: SolidityABI): string {
     const definitions = extractDefinitions(abi)
-    // store interfaces created as part of definition
-    // discovery in map by name for side-by-side definition
-    const interfaces = new Map<string, string>()
 
-    let contractDefinition = 'interface SolidityContract {'
+    const state: StateData = {
+        generatedNameCount: 0,
+        interfaces: new Map<string, string>()
+    }
+
+    let contractDefinition = "import { BigNumber, Contract } from 'ethers'\n" +
+        "import { TransactionResponse } from '@ethersproject/abstract-provider'\n\n" +
+        "interface SolidityContract extends Contract {"
     for (const functionDescription of definitions.functions) {
         if (!functionDescription.name) {
             // TODO: handle nameless functions if necessary
@@ -35,17 +52,17 @@ export function generateDefinitions(abi: SolidityABI): string {
             continue
         }
 
-        const inputObjects = functionDescription.inputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, interfaces)) ?? []
+        const inputObjects = functionDescription.inputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, state)) ?? []
         const parameterList = inputObjects.map((parameter) => `${parameter.identifier}: ${parameter.tsType.typeName}`).join(', ')
-        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, interfaces)
+        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, state)
         let functionDefinition = `${functionDescription.name}(${parameterList}): ${returnTypeDefinition}`
         contractDefinition += `\n  ${functionDefinition}`
     }
     contractDefinition += '\n}'
 
     let definitionResult = `${contractDefinition}\n`
-    if (interfaces.size > 0) {
-        for (const [, definition] of interfaces.entries()) {
+    if (state.interfaces.size > 0) {
+        for (const [, definition] of state.interfaces.entries()) {
             definitionResult += `\n${definition}\n`
         }
     }
@@ -74,13 +91,13 @@ function extractDefinitions(abi: SolidityDefinition[]) {
     return definitions
 }
 
-function generateStructDefinitionFromType(typeName: string, solidityType: SolidityType, interfaces: Map<string, string>): string {
+function generateStructDefinitionFromType(typeName: string, solidityType: SolidityType, state: StateData): string {
     if (!solidityType.internalType?.startsWith('struct')) {
         throw Error('Unsupported operation: cannot generate struct definition for non-struct type')
     }
     let definition = `interface ${typeName} {`
     const components = solidityType.components || []
-    const componentObjects = components.map((component) => convertSolidityTypeToTSObject(component, interfaces))
+    const componentObjects = components.map((component) => convertSolidityTypeToTSObject(component, state))
     for (const component of componentObjects) {
         definition += `\n  ${component.identifier}: ${component.tsType.typeName}`
     }
@@ -121,7 +138,7 @@ function generateInternalTypeName(solidityType: SolidityType, interfaces: Map<st
     // tuple or tuple array should use the same name generation logic
     if (/^tuple\[?\d*]?$/.test(solidityType.type)) {
         let name = ``
-        if (solidityType.name?.length > 0) {
+        if (!solidityType.generatedName && solidityType.name && solidityType.name.length > 0) {
             name += solidityType.name[0].toUpperCase()
             if (solidityType.name.length > 1) {
                 name += solidityType.name.substring(1)
@@ -133,12 +150,37 @@ function generateInternalTypeName(solidityType: SolidityType, interfaces: Map<st
     }
 }
 
-function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: Map<string, string>): TSObject {
+function ensureNameSet(solidityType: SolidityType, state: StateData) {
+    if (solidityType.name) {
+        // nothing to do here
+        return
+    }
+
+    state.generatedNameCount++
+    const typeName = solidityType.type.match(/^\w+/)?.[0] ?? ''
+    let name
+    if(!typeName.length) {
+        name = `var${state.generatedNameCount}`
+    }
+    else {
+        name = `${typeName}${state.generatedNameCount}`
+    }
+    solidityType.name = name
+    solidityType.generatedName = true
+}
+
+function convertSolidityTypeToTSObject(solidityType: SolidityType, state: StateData): TSObject {
+    const interfaces = state.interfaces
     if (!solidityType.internalType) {
         // we don't have internal type information, generate new type information on the fly
         solidityType.internalType = generateInternalTypeName(solidityType, interfaces)
     }
 
+    // This must be called after internal types have been generated to prevent generated variable names
+    // from further impacting name generation for internal types
+    ensureNameSet(solidityType, state)
+
+    //
     // detect tuple arrays (possibly multidimensional: capture the tuple
     // type up until before the last array bracket pair. i.e the highest order dimension)
     const tupleMatch = solidityType.type.match(/^(tuple(?:\[?\d*]?)*)\[\d*]$/)
@@ -147,9 +189,9 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
                 ...solidityType,
                 type: tupleMatch[1],
             },
-            interfaces)
+            state)
         return {
-            identifier: solidityType.name,
+            identifier: solidityType.name!,
             tsType: {
                 solidityType: solidityType,
                 typeName: `${tupleType.tsType.typeName}[]`,
@@ -169,11 +211,11 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
         typeName = typeName.substring(0, indexOfBracket === -1 ? undefined : indexOfBracket)
         let structDefinition = interfaces.has(typeName) ? interfaces.get(typeName) : null
         if (!structDefinition) {
-            structDefinition = generateStructDefinitionFromType(typeName, solidityType, interfaces)
+            structDefinition = generateStructDefinitionFromType(typeName, solidityType, state)
             interfaces.set(typeName, structDefinition)
         }
         return {
-            identifier: solidityType.name,
+            identifier: solidityType.name!,
             tsType: {
                 solidityType: solidityType,
                 typeName,
@@ -183,7 +225,7 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
     }
 
     return {
-        identifier: solidityType.name,
+        identifier: solidityType.name!,
         tsType: {
             solidityType: solidityType,
             typeName: getTypeNameForNonTuple(solidityType.type),
@@ -191,14 +233,14 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
     }
 }
 
-function buildReturnTypeDefinition(functionDescription: FunctionDescription, interfaces: Map<string, string>) {
+function buildReturnTypeDefinition(functionDescription: FunctionDescription, state: StateData) {
     let returnTypeDefinition = 'Promise<'
 
     if (!['pure', 'view'].includes(functionDescription.stateMutability ?? '')) {
         // returns Promise<TransactionResponse>
         returnTypeDefinition += 'TransactionResponse'
     } else {
-        const outputObjects = functionDescription.outputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, interfaces)) ?? []
+        const outputObjects = functionDescription.outputs?.map((solidityObject) => convertSolidityTypeToTSObject(solidityObject, state)) ?? []
         if (!outputObjects.length) {
             returnTypeDefinition += 'void'
         } else {

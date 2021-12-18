@@ -36,9 +36,10 @@ export interface ErrorDescription {
 }
 
 export interface SolidityType {
-    name: string
+    name: string | undefined
     type: string
     components?: SolidityType[]
     indexed?: boolean
     internalType?: string
+    generatedName?: boolean | undefined // added by name generator
 }
