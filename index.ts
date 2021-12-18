@@ -1,14 +1,17 @@
+#!/usr/bin/env node
+
 import {Command} from 'commander'
 import * as process from 'process'
-import {CompilationOutput, SolidityABI} from "./lib/types/abi-types";
-import {generateDefinitions, parseABIFile} from "./lib/scaffolder";
+import {generateDefinitions, parseABIFile} from './lib/scaffolder'
+import {CompilationOutput, SolidityABI} from './lib/types/abi-types'
+import {writeFile} from 'fs/promises'
 
 (async () => {
     const program = new Command()
 
     program
         .requiredOption('-f, --abi <abi-file>', 'Solidity ABI')
-        .option('-o, --output', 'Output file name')
+        .option('-o, --output <file-path>', 'Output file name. Defaults to stdout. Will ALWAYS override')
 
     program.parse(process.argv)
 
@@ -24,16 +27,27 @@ import {generateDefinitions, parseABIFile} from "./lib/scaffolder";
     }
 
     if (!uncheckedABI || !uncheckedABI.length) {
-        console.info('The ABI definition might be a compilation output, or it is empty or invalid.')
         // check abi as CompilationOutput
         uncheckedABI = uncheckedABI as any as CompilationOutput
         if (!uncheckedABI.abi || !uncheckedABI.abi.length) {
             console.error('ABI is not a valid ABI definition or compilation output file')
             return
         }
+        console.info('The file is a compilation output file, processing accordingly')
         uncheckedABI = uncheckedABI.abi
     }
 
     const abi = uncheckedABI as SolidityABI
-    console.log(generateDefinitions(abi))
+    const definitions = generateDefinitions(abi)
+    console.log('Definitions generated successfully')
+    if (!options.output) {
+        console.log(definitions)
+    } else {
+        try{
+            await writeFile(options.output, definitions, { flag: 'w+' })
+        }
+        catch (e) {
+            console.error('An error occurred while writing the file\n', e)
+        }
+    }
 })()

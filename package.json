@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Scaffold smart contract types for use with TypeScript and Ethers.js",
   "main": "dist/index.js",
+  "bin": "index.ts",
   "dependencies": {
     "ansi-styles": "^3.2.1",
     "argparse": "^1.0.10",

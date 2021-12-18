@@ -1,13 +1,13 @@
+import {open} from 'fs/promises'
 import {
     ErrorDescription,
     EventDescription,
     FunctionDescription,
     SolidityABI,
     SolidityDefinition,
-    SolidityType
-} from "../types/abi-types";
-import {open} from "fs/promises";
-import {TSObject} from "../types/output-types";
+    SolidityType,
+} from '../types/abi-types'
+import {TSObject} from '../types/output-types'
 
 interface Definitions {
     functions: FunctionDescription[],
@@ -37,7 +37,7 @@ export function generateDefinitions(abi: SolidityABI): string {
 
         const inputObjects = functionDescription.inputs?.map((stObj) => convertSolidityTypeToTSObject(stObj, interfaces)) ?? []
         const parameterList = inputObjects.map((parameter) => `${parameter.identifier}: ${parameter.tsType.typeName}`).join(', ')
-        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, interfaces);
+        const returnTypeDefinition = buildReturnTypeDefinition(functionDescription, interfaces)
         let functionDefinition = `${functionDescription.name}(${parameterList}): ${returnTypeDefinition}`
         contractDefinition += `\n  ${functionDefinition}`
     }
@@ -45,7 +45,7 @@ export function generateDefinitions(abi: SolidityABI): string {
 
     let definitionResult = `${contractDefinition}\n`
     if (interfaces.size > 0) {
-        for(const [, definition] of interfaces.entries()) {
+        for (const [, definition] of interfaces.entries()) {
             definitionResult += `\n${definition}\n`
         }
     }
@@ -56,7 +56,7 @@ function extractDefinitions(abi: SolidityDefinition[]) {
     const definitions: Definitions = {
         functions: [],
         events: [],
-        errors: []
+        errors: [],
     }
     for (const definition of abi) {
         switch (definition.type) {
@@ -107,7 +107,7 @@ function getTypeNameForNonTuple(type: string): string {
     const intMatch = type.match(/^u?int(\d*)$/)
     if (intMatch) {
         // number is an int<M> or uint<M>
-        let intSize = intMatch[1] == '' ? 256 : parseInt(intMatch[1])
+        let intSize = intMatch[1] === '' ? 256 : parseInt(intMatch[1])
         return intSize <= 32 ? 'number' : 'BigNumber'
     }
 
@@ -145,7 +145,7 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
     if (tupleMatch) {
         const tupleType = convertSolidityTypeToTSObject({
                 ...solidityType,
-                type: tupleMatch[1]
+                type: tupleMatch[1],
             },
             interfaces)
         return {
@@ -153,16 +153,15 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
             tsType: {
                 solidityType: solidityType,
                 typeName: `${tupleType.tsType.typeName}[]`,
-                definition: tupleType.tsType.definition
+                definition: tupleType.tsType.definition,
             },
         }
-    }
-    else if (solidityType.type === 'tuple') {
+    } else if (solidityType.type === 'tuple') {
         // process as struct
         const indexOfDot = solidityType.internalType.indexOf('.')
         if (indexOfDot === -1 || indexOfDot >= solidityType.internalType.length - 1) {
             console.error('Unsupported tuple definition:', solidityType)
-            throw new Error(`Tuple definitition ${solidityType.internalType} is unsupported`)
+            throw new Error(`Tuple definition ${solidityType.internalType} is unsupported`)
         }
 
         let typeName = solidityType.internalType.substring(indexOfDot + 1).trim()
@@ -178,7 +177,7 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
             tsType: {
                 solidityType: solidityType,
                 typeName,
-                definition: structDefinition
+                definition: structDefinition,
             },
         }
     }
@@ -187,8 +186,8 @@ function convertSolidityTypeToTSObject(solidityType: SolidityType, interfaces: M
         identifier: solidityType.name,
         tsType: {
             solidityType: solidityType,
-            typeName: getTypeNameForNonTuple(solidityType.type)
-        }
+            typeName: getTypeNameForNonTuple(solidityType.type),
+        },
     }
 }
 
@@ -213,5 +212,5 @@ function buildReturnTypeDefinition(functionDescription: FunctionDescription, int
     }
 
     returnTypeDefinition += '>'
-    return returnTypeDefinition;
+    return returnTypeDefinition
 }

@@ -1,4 +1,4 @@
-import {SolidityType} from "./abi-types";
+import {SolidityType} from './abi-types'
 
 export interface TSType {
     solidityType: SolidityType
@@ -6,7 +6,7 @@ export interface TSType {
     definition?: string // undefined if a primitive TS type is used
 }
 
-export interface TSObject{
+export interface TSObject {
     identifier: string
     tsType: TSType
 }
