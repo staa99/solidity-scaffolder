@@ -1,9 +1,11 @@
 {
   "name": "solidity-scaffolder",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Scaffold smart contract types for use with TypeScript and Ethers.js",
   "main": "dist/index.js",
-  "bin": "index.ts",
+  "bin": {
+    "scaffold-contract-types": "dist/index.js"
+  },
   "dependencies": {
     "ansi-styles": "^3.2.1",
     "argparse": "^1.0.10",
@@ -50,8 +52,9 @@
   "scripts": {
     "start": "ts-node index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "run-basic-sample": "npm run start -- -f samples/ethers-docs-sample.json",
-    "run-hh-sample": "npm run start -- -f samples/sample-hardhat-compilation-output.json"
+    "build": "tsc",
+    "run-basic-sample": "scaffold-contract-types -f samples/ethers-docs-sample.json",
+    "run-hh-sample": "scaffold-contract-types -f samples/sample-hardhat-compilation-output.json"
   },
   "repository": {
     "type": "git",
